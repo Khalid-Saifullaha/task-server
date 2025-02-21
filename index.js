@@ -103,6 +103,83 @@ async function run() {
       res.send(task);
     });
 
+    // delete taskjs
+    app.delete("/tasks/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { addedBy } = req.query;
+
+        const query = {
+          _id: new ObjectId(id),
+          addedBy: addedBy,
+        };
+
+        // console.log("Deleting task:", query);
+
+        const result = await tasksCollection.deleteOne(query);
+        res.send(result);
+      } catch (error) {
+        console.error("Error deleting task:", error);
+        res.status(500).send({ error: "Failed to delete task" });
+      }
+    });
+
+    app.put("/tasks/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { addedBy } = req.query; // Get user email from query
+
+        const filter = {
+          _id: new ObjectId(id),
+          addedBy: addedBy, // Add user filter
+        };
+
+        const options = { upsert: false };
+        const updatedTask = req.body;
+
+        const updateDoc = {
+          $set: {
+            ...updatedTask,
+            order: parseInt(updatedTask.order || 0),
+            addedBy: addedBy, // Ensure addedBy is preserved
+          },
+        };
+
+        // console.log("Updating task:", filter, updateDoc); // Debug log
+
+        const result = await tasksCollection.updateOne(
+          filter,
+          updateDoc,
+          options
+        );
+        res.send(result);
+      } catch (error) {
+        console.error("Error updating task:", error);
+        res.status(500).send({ error: "Failed to update task" });
+      }
+    });
+
+    // Add this new endpoint for reordering tasks
+    app.put("/tasks/reorder", async (req, res) => {
+      try {
+        const { tasks } = req.body;
+
+        // Update each task's order
+        const updatePromises = tasks.map((task) => {
+          return tasksCollection.updateOne(
+            { _id: new ObjectId(task.id) },
+            { $set: { order: task.order } }
+          );
+        });
+
+        await Promise.all(updatePromises);
+        res.status(200).json({ message: "Tasks reordered successfully" });
+      } catch (error) {
+        console.error("Error reordering tasks:", error);
+        res.status(500).json({ message: "Failed to reorder tasks" });
+      }
+    });
+
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
     // console.log(
