@@ -74,20 +74,21 @@ async function run() {
       }
     });
 
-    // GET: Retrieve tasks for
     app.get("/tasks", async (req, res) => {
       try {
         const { addedBy } = req.query;
-        // console.log("Request query:", req.query);
+        console.log("Received request with addedBy:", addedBy); // Debugging log
+
         if (!addedBy) {
-          // console.log("No addedBy provided");
+          console.log("No addedBy provided in request");
           return res.status(400).send({ error: "User email is required" });
         }
 
         const query = { addedBy: addedBy };
-        // console.log("MongoDB query:", query);
+        console.log("MongoDB query:", query); // Debugging log
+
         const tasks = await tasksCollection.find(query).toArray();
-        // console.log("Found tasks:", tasks.length, "for user:", addedBy);
+        console.log("Found tasks:", tasks.length); // Debugging log
 
         res.send(tasks);
       } catch (error) {
@@ -109,14 +110,19 @@ async function run() {
         const id = req.params.id;
         const { addedBy } = req.query;
 
+        console.log("Deleting task with ID:", id, "Added by:", addedBy);
+
         const query = {
           _id: new ObjectId(id),
           addedBy: addedBy,
         };
 
-        // console.log("Deleting task:", query);
-
         const result = await tasksCollection.deleteOne(query);
+
+        if (result.deletedCount === 0) {
+          return res.status(404).send({ error: "Task not found" });
+        }
+
         res.send(result);
       } catch (error) {
         console.error("Error deleting task:", error);
